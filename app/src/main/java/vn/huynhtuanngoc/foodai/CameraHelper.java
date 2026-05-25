@@ -73,11 +73,9 @@ public class CameraHelper {
                                 preview,
                                 analysis
                         );
-
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-
                 }, ContextCompat.getMainExecutor(
                         previewView.getContext()
                 ));
