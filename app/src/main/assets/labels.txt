@@ -1,10 +1,10 @@
-0 Cơm tấm
-1 Phở
-2 Bánh mì
-3 Canh chua
-4 Gỏi cuốn
-5 Cá kho tộ
-6 Cháo lòng
-7 Bánh tét
-8 Bún đâu mắm tôm
-9 Bánh Pía
+0 Cơm Tấm
+1 Phở 
+2 Bánh Pía
+3 Bánh Mì
+4 Gỏi Cuốn
+5 Bánh Tét
+6 Cháo Lòng
+7 Bún Đậu Măm Tôm
+8 Bánh Xèo
+9 Nem Chua
