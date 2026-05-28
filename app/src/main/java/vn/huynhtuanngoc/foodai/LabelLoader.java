@@ -24,13 +24,14 @@ public class LabelLoader {
                 new ArrayList<>();
 
         String line;
-
         while ((line = reader.readLine()) != null) {
-            labels.add(line);
+
+            String cleanLine =
+                    line.replaceFirst("^\\d+\\s*", "");
+
+            labels.add(cleanLine);
         }
-
         reader.close();
-
         return labels.toArray(new String[0]);
     }
 }

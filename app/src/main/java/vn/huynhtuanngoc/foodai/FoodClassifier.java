@@ -92,10 +92,13 @@ public class FoodClassifier {
                 maxIndex = i;
             }
         }
-
+        String label = labels[maxIndex];
+        int calories =
+                FoodCalories.getCalories(label);
         return new FoodResult(
-                labels[maxIndex],
-                maxConfidence
+                label,
+                maxConfidence,
+                calories
         );
     }
 

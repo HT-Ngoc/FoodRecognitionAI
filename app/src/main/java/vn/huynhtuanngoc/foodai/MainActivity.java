@@ -1,9 +1,13 @@
 package vn.huynhtuanngoc.foodai;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -13,55 +17,56 @@ import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MainActivity
-        extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity {
 
     private PreviewView previewView;
     private TextView resultText;
-
+    private Button btnViewRecipe;
     private FoodClassifier classifier;
 
     private final ExecutorService cameraExecutor =
             Executors.newSingleThreadExecutor();
 
     private long lastAnalyzeTime = 0;
+    private String currentFoodName = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
-
         setContentView(R.layout.activity_main);
 
-        previewView =
-                findViewById(R.id.previewView);
+        previewView = findViewById(R.id.previewView);
+        resultText = findViewById(R.id.resultText);
+        btnViewRecipe = findViewById(R.id.btnViewRecipe);
 
-        resultText =
-                findViewById(R.id.resultText);
+        btnViewRecipe.setOnClickListener(v -> {
+            if (!currentFoodName.isEmpty()) {
+                Intent intent = new Intent(MainActivity.this, RecipeActivity.class);
+                intent.putExtra("FOOD_NAME", currentFoodName);
+                startActivity(intent);
+            }
+        });
 
         try {
-
-            classifier =
-                    new FoodClassifier(this);
+            classifier = new FoodClassifier(this);
         } catch (Exception e) {
             e.printStackTrace();
-
-            resultText.setText(
-                    e.getMessage()
-            );
+            resultText.setText(e.getMessage());
         }
+
         if (ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.CAMERA
         ) == PackageManager.PERMISSION_GRANTED) {
-
             startCamera();
-
         } else {
-
             ActivityCompat.requestPermissions(
                     this,
                     new String[]{
@@ -73,7 +78,6 @@ public class MainActivity
     }
 
     private void startCamera() {
-
         CameraHelper.startCamera(
                 this,
                 previewView,
@@ -84,40 +88,100 @@ public class MainActivity
 
     private void analyzeImage(ImageProxy image) {
 
-        if (System.currentTimeMillis()
-                - lastAnalyzeTime < 400) {
-
+        if (System.currentTimeMillis() - lastAnalyzeTime < 400) {
             image.close();
             return;
         }
 
-        lastAnalyzeTime =
-                System.currentTimeMillis();
+        lastAnalyzeTime = System.currentTimeMillis();
 
-        Bitmap bitmap =
-                ImageProcessor.imageToBitmap(image);
-
+        Bitmap bitmap = ImageProcessor.imageToBitmap(image);
         image.close();
 
         if (bitmap == null) {
             return;
         }
 
-        FoodResult result =
-                classifier.classify(bitmap);
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+
+        int cropSize = (int) (Math.min(width, height) * 0.8f);
+
+        int startX = (width - cropSize) / 2;
+        int startY = (height - cropSize) / 2;
+
+        Bitmap croppedBitmap = Bitmap.createBitmap(
+                bitmap,
+                startX,
+                startY,
+                cropSize,
+                cropSize
+        );
+
+        FoodResult result = classifier.classify(croppedBitmap);
 
         runOnUiThread(() -> {
 
-            String text =
-                    result.getLabel()
-                            + "\nĐộ chính xác: "
-                            + (int)(
-                            result.getConfidence() * 100
-                    )
-                            + "%";
+            if (result.getConfidence() < 0.85f) {
 
-            resultText.setText(text);
+                resultText.setText(
+                        "Đang quét...\nVui lòng đưa món ăn vào khung"
+                );
+
+                btnViewRecipe.setVisibility(View.GONE);
+
+            } else {
+
+                currentFoodName = result.getLabel();
+
+                String text = currentFoodName
+                        + "\nCalories: " + result.getCalories() + " kcal"
+                        + "\nAccuracy: "
+                        + (int) (result.getConfidence() * 100)
+                        + "%";
+
+                resultText.setText(text);
+
+                btnViewRecipe.setText(
+                        "Xem công thức " + currentFoodName
+                );
+
+                btnViewRecipe.setVisibility(View.VISIBLE);
+
+                saveHistoryToFirebase(
+                        currentFoodName,
+                        result.getCalories()
+                );
+            }
         });
+    }
+
+    private void saveHistoryToFirebase(String name, int calo) {
+
+        try {
+
+            String deviceId = Settings.Secure.getString(
+                    getContentResolver(),
+                    Settings.Secure.ANDROID_ID
+            );
+
+            DatabaseReference historyRef =
+                    FirebaseDatabase.getInstance()
+                            .getReference("users")
+                            .child(deviceId)
+                            .child("history");
+
+            HashMap<String, Object> map = new HashMap<>();
+
+            map.put("foodName", name);
+            map.put("calories", calo);
+            map.put("timestamp", System.currentTimeMillis());
+
+            historyRef.push().setValue(map);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -135,8 +199,7 @@ public class MainActivity
 
         if (requestCode == 100
                 && grantResults.length > 0
-                && grantResults[0]
-                == PackageManager.PERMISSION_GRANTED) {
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
             startCamera();
         }

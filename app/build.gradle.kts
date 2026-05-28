@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
@@ -47,6 +48,7 @@ android {
 
 dependencies {
 
+    implementation(libs.firebase.database)
     val camerax_version = "1.3.4"
 
     implementation("androidx.camera:camera-core:$camerax_version")
