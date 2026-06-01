@@ -3,7 +3,6 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.CAMERA"/>
-
     <uses-permission android:name="android.permission.INTERNET" />
 
     <uses-feature
@@ -31,6 +30,11 @@
 
         <activity
             android:name=".RecipeActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".HistoryActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity" />
 
